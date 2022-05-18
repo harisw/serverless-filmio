@@ -1,0 +1,113 @@
+service: filmio-api
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: dev
+  region: ap-northeast-2
+  environment:
+    DYNAMO_TABLE_NAME: filmTable
+    FILMIO_BUCKET: filmiobucket
+    REGION: ap-northeast-2
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMO_TABLE_NAME}"
+functions:
+  importFilm:
+    handler: handler/admin.importFilm
+    events:
+      - http:
+          path: admin/import-film
+          method: post
+          cors: true
+  getGenre:
+    handler: handler/film.getGenre
+    events:
+      - http:
+          path: film/get-genre
+          method: get
+          cors: true
+  getManyFilms:
+    handler: handler/film.getMany
+    events:
+      - http:
+          path: film/get-all
+          method: get
+          cors: true
+  getFilmByGenre:
+    handler: handler/film.getFilmByGenre
+    events:
+      - http:
+          path: film/get-film-by-genre
+          method: get
+          cors: true
+  getFilm:
+    handler: handler/film.get
+    events:
+      - http:
+          path: film/get
+          method: get
+          cors: true
+plugins:
+  - serverless-offline
+resources:
+  Resources:
+    FilmsDynamoTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 10
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: genre
+            AttributeType: S
+          - AttributeName: year
+            AttributeType: N
+          - AttributeName: country
+            AttributeType: S
+          - AttributeName: avg_vote
+            AttributeType: N
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: genre
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: yearIndex
+            KeySchema:
+              - AttributeName: year
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 3
+              WriteCapacityUnits: 10
+          - IndexName: countryIndex
+            KeySchema:
+              - AttributeName: country
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 5
+              WriteCapacityUnits: 10
+          - IndexName: voteIndex
+            KeySchema:
+              - AttributeName: avg_vote
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 5
+              WriteCapacityUnits: 10
+        TableName: ${self:provider.environment.DYNAMO_TABLE_NAME}
