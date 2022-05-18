@@ -52,7 +52,7 @@ functions:
     handler: handler/film.get
     events:
       - http:
-          path: film/get
+          path: film/{id}
           method: get
           cors: true
 plugins:
